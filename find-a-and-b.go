@@ -12,6 +12,8 @@ func main() {
 	var minimumResults = [6]float64 {10, 70, -20, 95, 30, 25};
 	var maximumResults = [6]float64 {11, 71, -19, 96, 31, 26};
 	calculateCoefficient(averages, standardDeviations, minimumResults, maximumResults);
+
+	test1();
 }
 
 func test1() {
@@ -45,6 +47,7 @@ func calculateMatchmaking(
 			fmt.Println();
 			fmt.Printf("=======================\n");
 			fmt.Printf("\texpression %s is equal in round: %d", expression, index);
+			fmt.Printf("\tminimum: %v, maximum: %v", minimumResult, maximumResult);
 			fmt.Println();
 			fmt.Println("\tAverage coefficient is: ", averageCoefficient);
 			fmt.Println();
