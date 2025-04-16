@@ -154,3 +154,60 @@ var name string = "John"
 > [!NOTE]
 >
 > `const` is immutable & they must be initialized at declaration.
+
+# Functions
+
+- We can define functions in Go by using the `func` keyword.
+- We need to let the compiler know the return type of the function + the types of the parameters.
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	var num1 int = 11
+	var num2 int = 20
+	var result int = add(num1, num2)
+	fmt.Println(result)
+}
+
+func add(num1 int, num2 int) int {
+	return num1 + num2
+}
+```
+
+- We can return multiple values from a function.
+  - **Note**, this ain't the same as `tuple`s in Python.
+
+```go
+func divide(numerator int, denominator int) (int, int) {
+  var result int = numerator / denominator
+  var remainder int = numerator % denominator
+  return result, remainder
+}
+```
+
+> [!TIP]
+>
+> A common pattern in Go is to return an error as the last value:
+>
+> ```go
+> import "errors"
+> func divide(numerator int, denominator int) (int, int, error) {
+>   if denominator == 0 {
+>      return 0, 0, errors.New("cannot divide by zero")
+>   }
+>   var result int = numerator / denominator
+>   var remainder int = numerator % denominator
+>   return result, remainder, nil
+> }
+>
+> var divisionResult, divisionRemainder, error = divide(num1, num2)
+> if error != nil {
+>   fmt.Println(error.Error())
+>   return
+> }
+> ```
