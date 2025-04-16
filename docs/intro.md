@@ -264,3 +264,25 @@ switch {
   // ...
 }
 ```
+
+# Arrays
+
+- Fixed-size.
+- Homogeneous.
+- Indexed.
+  - Zero-based.
+
+```go
+import "fmt"
+
+var scores [5]int = [5]int{1, 2, 3, 4, 5}
+fmt.Println(scores[:])   // [0 0 0 0 0]
+fmt.Println(scores[1:3]) // [2 3]
+```
+
+> [!TIP]
+>
+> ```go
+> scores := [...]int{1, 2, 3, 4, 5}
+> var names [3]string
+> ```
