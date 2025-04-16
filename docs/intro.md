@@ -211,3 +211,31 @@ func divide(numerator int, denominator int) (int, int) {
 >   return
 > }
 > ```
+
+# Logical Operators & Comparison Operators
+
+<table>
+  <tbody>
+    <tr>
+      <td><code>==</code></td>
+      <td><code>!=</code></td>
+      <td><code>&&</code></td>
+      <td><code>||</code></td>
+      <td><code>></code></td>
+      <td><code><</code></td>
+    </tr>
+    <tr>
+      <td><code>if res == 10 {</code></td>
+      <td><code>if err != nil {</code></td>
+      <td><code>if num2 > 0 && num1 > 0 {</code></td>
+      <td><code>if res == 2 || res == 4 {</code></td>
+      <td><code>if num1 > 0 {</code></td>
+      <td><code>if num2 < 0 {</code></td>
+    </tr>
+  </tbody>
+</table>
+
+> [!NOTE]
+>
+> - If the first statement in an `if` statement is true, the second statement is **NOT** evaluated for the `||` operator.
+> - If the first statement in an `if` statement is false, the second statement is **NOT** evaluated for the `&&` operator.
