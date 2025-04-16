@@ -1,3 +1,7 @@
+# build output
+
+main
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

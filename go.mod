@@ -1,4 +1,4 @@
-module github.com/kasir-barati/my-golang-journey
+module github.com/kasir-barati/golang
 
 go 1.21.4
 

@@ -1,11 +1,6 @@
-# 1. Install go
+# Content
 
-```cmd
-# Manjaro linux
-sudo pacman -Syu go
-# mac
-brew install go
-```
+1. [Intro](../docs/intro.md)
 
 # 2. What the heck is go.mod?
 
@@ -20,10 +15,6 @@ brew install go
 - `requirements.txt` in Python:
   - Lists the Python packages required for a project.
   - Specifies the versions of the packages needed.
-
-```cmd
-go mod init github.com/kasir-barati/my-golang-journey
-```
 
 # 3. Execute it
 
