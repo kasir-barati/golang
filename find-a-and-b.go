@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func main() {
+func findAAndB() {
 	var averages = [6]float64 {10, 62, -18, 89, 49, 37};
 	var standardDeviations = [6]float64 {44, 12, 7, 10, 74, 19};
 	var minimumResults = [6]float64 {10, 70, -20, 95, 30, 25};
