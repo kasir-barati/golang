@@ -239,3 +239,28 @@ func divide(numerator int, denominator int) (int, int) {
 >
 > - If the first statement in an `if` statement is true, the second statement is **NOT** evaluated for the `||` operator.
 > - If the first statement in an `if` statement is false, the second statement is **NOT** evaluated for the `&&` operator.
+
+# `switch` Statement
+
+- No need to use `break` in Go.
+  - It is implied.
+- You can have a `switch` statement without a condition.
+
+```go
+var num int = 10
+switch num {
+  case 1, 2:
+    println("num is 1 or 2")
+  case 10:
+    println("num is 10")
+  case 20:
+    println("num is 20")
+  default:
+    println("num is not 10 or 20")
+)
+switch {
+  case num > 0:
+    println("num is positive")
+  // ...
+}
+```
