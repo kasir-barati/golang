@@ -286,3 +286,35 @@ fmt.Println(scores[1:3]) // [2 3]
 > scores := [...]int{1, 2, 3, 4, 5}
 > var names [3]string
 > ```
+
+# Slices
+
+- Wrappers around arrays.
+- Omit the size of the array, and you'll have your slice.
+- It will automatically resizes the array for you.
+  - This has performance implications.
+  - So better to think carefully about the size/capacity of the slice.
+
+```go
+var scores []int
+scores = append(scores, 1)
+```
+
+> [!TIP]
+>
+> Use speared operator to append a list of values to a slice:
+>
+> ```go
+> numbers := []int{1, 2, 3, 4, 5}
+> scores = append(scores, numbers...)
+> ```
+
+## `make` Function
+
+- Creates a slice with a specified length and capacity.
+- The capacity is the size of the underlying array.
+  - This means that you can create a bigger slice than what you currently need in order to avoid recreating the underlying array when you need to add more elements.
+
+```go
+var scores []int = make([]int, 5, 10)
+```
