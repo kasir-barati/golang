@@ -14,3 +14,14 @@ help:
 
 ## Updates index.md so GH Pages shows always up to date content
 update_index:
+	@{
+		echo "# Content"
+		echo
+		n=1
+		for f in $$(find docs -maxdepth 1 -type f -name '*.md' | LC_ALL=C sort); do
+			title=$$(sed -n 's/^# \+//p' "$$f" | head -n1)
+			title=$${title:-$$(basename "$$f" .md)}
+			echo "$$n. [$$title](./$$f)"
+			n=$$((n + 1))
+		done
+	} > index.md

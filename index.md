@@ -1,3 +1,3 @@
 # Content
 
-1. [RabbitMQ](./docs/rabbitmq-backoff.md)
+1. [RabbitMQ Backoff](./docs/rabbitmq-backoff.md)
