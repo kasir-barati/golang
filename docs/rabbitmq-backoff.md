@@ -1,11 +1,38 @@
 # RabbitMQ Backoff
 
-So as can see if you run this locally the messages are consumed ascendingly (from the smaller delay to the biggest delay).
+So as can see if you run this locally the messages are consumed ascendingly (from the smaller delay to the biggest delay). In other words the first message with the biggest delay is not blocking the rest of the messages to be consumed. On the contrary, they are all consumed from the shortest delay to the longest:
+
+```bash
+$ docker compose up -d
+$ go run main.go
+broker: RabbitMQ 4.4.0
+queue: exp.1794258410735097988
+
+publishing in this order (id = position in plan):
+  published #0  delay  8000ms -> due at t=+ 8000ms
+  published #1  delay   200ms -> due at t=+  200ms
+  published #2  delay   500ms -> due at t=+  500ms
+  published #3  delay  4000ms -> due at t=+ 4000ms
+  published #4  delay   100ms -> due at t=+  100ms
+published 5 messages in 0 ms
+
+arrivals as they happen (t = ms since first publish):
+  t=  104ms  arrived #4  (delay   100ms) lateness    +4ms
+  t=  203ms  arrived #1  (delay   200ms) lateness    +4ms
+  t=  506ms  arrived #2  (delay   500ms) lateness    +6ms
+  t= 4007ms  arrived #3  (delay  4000ms) lateness    +7ms
+  t= 8009ms  arrived #0  (delay  8000ms) lateness    +9ms
+
+What to look for:
+  - If every message arrives near its due time -> NO head-of-line blocking.
+  - If a short-delay message arrives only after an earlier-published
+    long-delay message is due -> HEAD-OF-LINE BLOCKING.
+```
+
+Do **not** forget to run `go mod init` and `go mod tidy` before try to start the app.
 
 <details markdown="1">
 <summary><code>main.go</code></summary>
-
-Do not forget to run `go mod init` and `go mod tidy` before try to start the app.
 
 ```go
 package main
