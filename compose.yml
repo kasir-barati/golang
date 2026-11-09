@@ -1,0 +1,15 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4.4-management-alpine
+    hostname: rabbitmq
+    ports:
+      - 35674:5672    # AMQP — matches amqpURL in main.go
+      - 35675:15672   # management UI (optional, open in browser)
+    environment:
+      RABBITMQ_DEFAULT_USER: test
+      RABBITMQ_DEFAULT_PASS: test
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
