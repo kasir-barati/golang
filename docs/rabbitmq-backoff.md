@@ -2,7 +2,8 @@
 
 So as can see if you run this locally the messages are consumed ascendingly (from the smaller delay to the biggest delay).
 
-<details><summary><code>main.go</code></summary>
+<details markdown="1">
+<summary><code>main.go</code></summary>
 
 Do not forget to run `go mod init` and `go mod tidy` before try to start the app.
 
@@ -107,7 +108,8 @@ func must(err error) {
 
 </details>
 
-<details><summary><code>main.go</code></summary>
+<details markdown="1">
+<summary><code>compose.yml</code></summary>
 
 ```yaml
 services:
