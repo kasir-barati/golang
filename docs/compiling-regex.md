@@ -232,3 +232,8 @@ func systemInfo() string {
 ```
 
 </details>
+
+## Shared in Social Media
+
+- https://x.com/kasir_barati/status/2121237612149047392
+- https://www.instagram.com/p/Dfrw7f_Nd93/?xtok=NTc4MTIwNjQ2YQ==
