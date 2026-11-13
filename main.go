@@ -1,96 +1,183 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"time"
+	"os"
+	"regexp"
+	"runtime"
+	"strings"
+	"testing"
 
-	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
-var plan = []struct {
-	ID      int
-	DelayMs int64
-}{
-	{ID: 0, DelayMs: 8000}, // published first, long delay  -> long due time
-	{ID: 1, DelayMs: 200},  // published after #0, short delay -> due very soon
-	{ID: 2, DelayMs: 500},
-	{ID: 3, DelayMs: 4000},
-	{ID: 4, DelayMs: 100},
+const (
+	simplePattern  = `\W`
+	complexPattern = `^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(?:Z|[+-]\d{2}:\d{2})?\s+\[(ERROR|WARN|INFO|DEBUG)\]\s+(.*)$`
+	emailPattern   = `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+)
+
+var (
+	simpleRE  = regexp.MustCompile(simplePattern)
+	complexRE = regexp.MustCompile(complexPattern)
+	emailRE   = regexp.MustCompile(emailPattern)
+)
+
+var (
+	sinkString   string
+	sinkSubmatch []string
+	sinkBool     bool
+)
+
+type BenchResult struct {
+	Name        string
+	Iters       int
+	NsPerOp     float64
+	BytesPerOp  int64
+	AllocsPerOp int64
 }
 
-const amqpURL = "amqp://test:test@localhost:35674/"
+func run(name string, fn func()) BenchResult {
+	r := testing.Benchmark(func(b *testing.B) {
+		b.ReportAllocs()
+		for i := 0; i < b.N; i++ {
+			fn()
+		}
+	})
+	return BenchResult{
+		Name:        name,
+		Iters:       r.N,
+		NsPerOp:     float64(r.NsPerOp()),
+		BytesPerOp:  r.AllocedBytesPerOp(),
+		AllocsPerOp: r.AllocsPerOp(),
+	}
+}
 
-type payload struct {
-	ID            int   `json:"id"`
-	DelayMs       int64 `json:"delayMs"`
-	PublishedAtMs int64 `json:"publishedAtMs"`
+// printTable uses go-pretty to render the comparison table.
+func printTable(pairs [][2]BenchResult) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+
+	t.AppendHeader(table.Row{
+		"Benchmark",
+		"iters",
+		"ns/op",
+		"B/op",
+		"allocs/op",
+		"time gain",
+		"alloc gain",
+	})
+
+	// Right-align numeric columns; left-align the benchmark name.
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{Number: 1, Align: text.AlignLeft},  // Benchmark
+		{Number: 2, Align: text.AlignRight}, // iters
+		{Number: 3, Align: text.AlignRight}, // ns/op
+		{Number: 4, Align: text.AlignRight}, // B/op
+		{Number: 5, Align: text.AlignRight}, // allocs/op
+		{Number: 6, Align: text.AlignRight}, // time gain
+		{Number: 7, Align: text.AlignRight}, // alloc gain
+	})
+
+	for _, pair := range pairs {
+		naive, cached := pair[0], pair[1]
+
+		timeGain := naive.NsPerOp / cached.NsPerOp
+		allocGain := float64(naive.AllocsPerOp) / float64(cached.AllocsPerOp)
+
+		allocGainStr := fmt.Sprintf("%.1fx", allocGain)
+		if cached.AllocsPerOp == 0 {
+			allocGainStr = "∞"
+		}
+
+		// Render the naive row (first of the pair).
+		t.AppendRow(table.Row{
+			naive.Name,
+			naive.Iters,
+			fmt.Sprintf("%.2f", naive.NsPerOp),
+			naive.BytesPerOp,
+			naive.AllocsPerOp,
+			fmt.Sprintf("%.1fx", timeGain),
+			allocGainStr,
+		})
+
+		// Render the cached row (second of the pair).
+		t.AppendRow(table.Row{
+			cached.Name,
+			cached.Iters,
+			fmt.Sprintf("%.2f", cached.NsPerOp),
+			cached.BytesPerOp,
+			cached.AllocsPerOp,
+			fmt.Sprintf("%.1fx", timeGain),
+			allocGainStr,
+		})
+
+		t.AppendSeparator()
+	}
+
+	t.Render()
 }
 
 func main() {
-	conn, err := amqp.Dial(amqpURL)
-	must(err)
-	defer conn.Close()
+	fmt.Println("Regexp: compile-per-request vs precompiled (cached)")
 
-	ch, err := conn.Channel()
-	must(err)
+	simpleNaive := run("compile per req (simple)", func() {
+		re := regexp.MustCompile(simplePattern)
+		sinkString = re.ReplaceAllString(" the string ", "")
+	})
+	simpleCached := run("precompiled (simple)", func() {
+		sinkString = simpleRE.ReplaceAllString(" the string ", "")
+	})
 
-	qname := fmt.Sprintf("exp.%d", time.Now().UnixNano())
-	_, err = ch.QueueDeclare(qname, true, false, false, false, amqp.Table{"x-queue-type": "quorum"})
-	must(err)
-	fmt.Printf("broker: RabbitMQ %v\nqueue: %s\n\n", conn.Properties["version"], qname)
+	complexNaive := run("compile per req (complex)", func() {
+		re := regexp.MustCompile(complexPattern)
+		sinkSubmatch = re.FindStringSubmatch("2025-01-15 12:34:56 [ERROR] connection timeout")
+	})
+	complexCached := run("precompiled (complex)", func() {
+		sinkSubmatch = complexRE.FindStringSubmatch("2025-01-15 12:34:56 [ERROR] connection timeout")
+	})
 
-	// Start consuming BEFORE publishing so nothing is missed.
-	deliveries, err := ch.Consume(qname, "", true, false, false, false, nil)
-	must(err)
+	emailNaive := run("compile per req (email)", func() {
+		re := regexp.MustCompile(emailPattern)
+		sinkBool = re.MatchString("alice.smith+tag@example.co.uk")
+	})
+	emailCached := run("precompiled (email)", func() {
+		sinkBool = emailRE.MatchString("alice.smith+tag@example.co.uk")
+	})
 
-	start := time.Now()
-	fmt.Println("publishing in this order (id = position in plan):")
-	for _, p := range plan {
-		now := time.Now()
-		body, _ := json.Marshal(payload{ID: p.ID, DelayMs: p.DelayMs, PublishedAtMs: now.UnixMilli()})
-		err = ch.PublishWithContext(context.Background(), "", qname, false, false, amqp.Publishing{
-			Body: body,
-			Headers: amqp.Table{
-				"x-opt-delivery-time": now.Add(time.Duration(p.DelayMs) * time.Millisecond).UnixMilli(),
-			},
-		})
-		must(err)
-		due := now.Add(time.Duration(p.DelayMs) * time.Millisecond)
-		fmt.Printf("  published #%-2d delay %5dms -> due at t=+%5dms\n",
-			p.ID, p.DelayMs, due.Sub(start).Milliseconds())
-	}
-	fmt.Printf("published %d messages in %d ms\n\n", len(plan), time.Since(start).Milliseconds())
+	compileOnly := run("compile only (complex)", func() {
+		regexp.MustCompile(complexPattern)
+	})
+	matchOnly := run("match only (precompiled)", func() {
+		sinkSubmatch = complexRE.FindStringSubmatch("2025-01-15 12:34:56 [ERROR] connection timeout")
+	})
 
-	fmt.Println("arrivals as they happen (t = ms since first publish):")
-	deadline := time.After(30 * time.Second)
-	for received := 0; received < len(plan); {
-		select {
-		case d := <-deliveries:
-			var b payload
-			must(json.Unmarshal(d.Body, &b))
-			delay := time.Duration(b.DelayMs) * time.Millisecond
-			due := time.UnixMilli(b.PublishedAtMs).Add(delay)
-			arrived := time.Now()
-			lateness := arrived.Sub(due).Milliseconds()
-			fmt.Printf("  t=%5dms  arrived #%-2d (delay %5dms) lateness %+5dms\n",
-				arrived.Sub(start).Milliseconds(), b.ID, b.DelayMs, lateness)
-			received++
-		case <-deadline:
-			fmt.Printf("\nTIMEOUT: only %d of %d messages arrived\n", received, len(plan))
-			return
+	printTable([][2]BenchResult{
+		{simpleNaive, simpleCached},
+		{complexNaive, complexCached},
+		{emailNaive, emailCached},
+		{compileOnly, matchOnly},
+	})
+	fmt.Println(systemInfo())
+}
+
+func systemInfo() string {
+	cpuModel := "unknown"
+	if data, err := os.ReadFile("/proc/cpuinfo"); err == nil {
+		for _, line := range strings.Split(string(data), "\n") {
+			if strings.HasPrefix(line, "model name") {
+				if parts := strings.SplitN(line, ":", 2); len(parts) == 2 {
+					cpuModel = strings.TrimSpace(parts[1])
+				}
+				break
+			}
 		}
 	}
 
-	fmt.Println("\nWhat to look for:")
-	fmt.Println("  - If every message arrives near its due time -> NO head-of-line blocking.")
-	fmt.Println("  - If a short-delay message arrives only after an earlier-published")
-	fmt.Println("    long-delay message is due -> HEAD-OF-LINE BLOCKING.")
-}
-
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
+	return fmt.Sprintf(
+		"System: %s/%s\nCPU: %s\nCores: %d\nGOMAXPROCS: %d\nGo: %s",
+		runtime.GOOS, runtime.GOARCH, cpuModel,
+		runtime.NumCPU(), runtime.GOMAXPROCS(0), runtime.Version(),
+	)
 }
